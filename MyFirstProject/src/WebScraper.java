@@ -4,9 +4,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.stream.Stream;
 
-public class MyFirstClass {
+public class WebScraper {
 
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub test
@@ -22,44 +21,36 @@ public class MyFirstClass {
 	private static String scrapeWebPage (String url) {
 		String message = "";
 		
-		
 		try {
 			URL myUrl = new URL(url);
 			InputStream in = myUrl.openStream();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 			
-			//Stream<String> noOfLines = new Stream<String>();
-			Stream<String> lines = reader.lines();
+			readLines(reader);
 			
-			/*
-			for each (String string in lines) {
-				
 			}
-			*/
-			message = reader.readLine();
-			
-		}
 		catch (MalformedURLException e1)
 		{
 			message = "Malformed URL Exception : " + e1.toString();
 			
 		} catch (IOException e2) {
-			// TODO Auto-generated catch block
 			message = e2.toString();
 		}
 		
 		return message;
-		/*
-		finally {
-			if (message != "") {
-			return message;
-			}
-			else return html;
-		}
-		*/
 	}
 	
-	public static boolean appendLineToDB() {
+	private static boolean readLines(BufferedReader inReader) {
+		try {
+			while (inReader.readLine() != null) {
+				DbOperations.appendLineToDB(inReader.readLine());
+			}
+		}
+		catch (Exception e) {
+			System.out.println("Feil! : " + e.getMessage());
+			return false;
+		}
+		
 		return true;
 	}
 }
