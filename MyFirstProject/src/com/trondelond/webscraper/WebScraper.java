@@ -1,3 +1,4 @@
+package com.trondelond.webscraper;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -16,6 +17,9 @@ public class WebScraper {
 	private static String dataBaseName; 
 	private static String url;
 	private static String[] tableArray;
+	private static DbOperations DbOp;
+	private static Connection conn;
+	private static int siteId;
 	
 	public static void main(String[] args) throws IOException {
 		if (args.length > 0) {
@@ -26,26 +30,39 @@ public class WebScraper {
 		}
 		
 		if (readConfig()) {
-			DbOperations DbOp = new DbOperations(dataBaseName, tableArray);
-			//Connection webScraperConnection = DbOp.getConnection();
+			DbOp = new DbOperations(dataBaseName, tableArray);
+			conn = DbOp.getConnection();
 			
-			//DbOperations.appendSiteToDB(webScraperConnection);
+			if(DbOperations.appendSiteToDB(conn, url) == -1) {
+				System.out.println("Main : Site retrieval error.");
+			}
+			
+			String message = scrapeWebPage(url);
+			System.out.println("Main : scrapeWebPageMessage = " + message);
 		}
 		else {
 			System.out.println("main feil");
 		}
+		
+		String script = getScript();
+		System.out.println(script);
 	}
 	
-	private static String scrapeWebPage (String url) {
-		String message = "";
+	public static String scrapeWebPage (String url) {
+		String message = "OK";
+		String sql = "SELECT sites.id " + 
+					"FROM sites " +
+					"WHERE sites.url = '" + url + "'";
 		
+		siteId = Integer.parseInt(DbOp.runQuerySingleValue(sql));
+		
+		System.out.println("scrapeWebPage : siteId = " + siteId);
 		try {
 			URL myUrl = new URL(url);
 			InputStream in = myUrl.openStream();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 			
 			readLines(reader);
-			
 			}
 		catch (MalformedURLException e1)
 		{
@@ -58,7 +75,30 @@ public class WebScraper {
 		return message;
 	}
 	
+	private static boolean readLines(BufferedReader inReader) {
+		try {
+			while (inReader.readLine() != null) {
+				if (!DbOp.appendLineToDB(inReader.readLine(), siteId)) break;
+			}
+		}
+		catch (Exception e) {
+			System.out.println("Feil! : " + e.getMessage());
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public static String getScript(){
+		
+		String script = DbOp.getScriptFromDB(dataBaseName, siteId);
+		return script;
+		
+	}
+	
 	private static boolean readConfig() {
+		System.out.println("readConfig Start!");
+		
 		Properties prop = new Properties();
 		InputStream input = null;
 		boolean success = false;
@@ -73,7 +113,15 @@ public class WebScraper {
 			}
 
 			prop.load(input);
+			
+			System.out.println("readConfig : initialize values...");
+			
 			dataBaseName = prop.getProperty("dataBaseName");
+			url = prop.getProperty("url");
+			
+			System.out.println("readConfig : dataBaseName = " + dataBaseName);
+			System.out.println("readConfig : url = " + url);
+
 			
 			// how many properties with tablenames? -> initialize tableArray
 			int j = 0;
@@ -88,10 +136,7 @@ public class WebScraper {
 			
 			//fetch tablenames
 			int i = 1;
-			
-
-
-			
+						
 			String propertyTable = "table" + i;
 			String configTableName = prop.getProperty(propertyTable);
 			
@@ -104,6 +149,8 @@ public class WebScraper {
 			}
 			while (configTableName != null);
 			
+
+		
 		} catch (IOException ex) {
 			ex.printStackTrace();
 			success = false;
@@ -124,22 +171,6 @@ public class WebScraper {
 		success = true;
 		return success;
 	}
-	
-	private static boolean readLines(BufferedReader inReader) {
-		try {
-			while (inReader.readLine() != null) {
-				DbOperations.appendLineToDB(inReader.readLine());
-			}
-		}
-		catch (Exception e) {
-			System.out.println("Feil! : " + e.getMessage());
-			return false;
-		}
-		
-		return true;
-	}
-	
-	
 	
 	private static void writeConfig() {
 		Properties prop = new Properties();
