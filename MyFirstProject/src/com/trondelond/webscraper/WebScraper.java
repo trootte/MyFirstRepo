@@ -8,20 +8,23 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.Connection;
+//import java.sql.Connection;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Properties;
 
-public class WebScraper {
+public class WebScraper implements WebScraperInterface{
 
-	private static String dataBaseName; 
+	public static String dataBaseName; 
 	private static String url;
 	private static String[] tableArray;
 	private static DbOperations DbOp;
-	private static Connection conn;
+	//private static Connection conn;
 	private static int siteId;
 	
 	public static void main(String[] args) throws IOException {
+		System.out.println("Main Start");
+		/*
 		if (args.length > 0) {
 			if (args[0].equals("1")) {
 				System.out.println("Main : write config!");
@@ -29,15 +32,17 @@ public class WebScraper {
 			}
 		}
 		
+		DbOp = new DbOperations(dataBaseName, tableArray);
+		
 		if (readConfig()) {
-			DbOp = new DbOperations(dataBaseName, tableArray);
+			
 			conn = DbOp.getConnection();
 			
 			if(DbOperations.appendSiteToDB(conn, url) == -1) {
 				System.out.println("Main : Site retrieval error.");
 			}
 			
-			String message = scrapeWebPage(url);
+			String message = doScrapeWebPage(url);
 			System.out.println("Main : scrapeWebPageMessage = " + message);
 		}
 		else {
@@ -46,15 +51,47 @@ public class WebScraper {
 		
 		String script = getScript();
 		System.out.println(script);
+		*/
 	}
 	
-	public static String scrapeWebPage (String url) {
-		String message = "OK";
-		String sql = "SELECT sites.id " + 
-					"FROM sites " +
-					"WHERE sites.url = '" + url + "'";
+	public WebScraper(){
+		writeConfig();
+		readConfig();
 		
-		siteId = Integer.parseInt(DbOp.runQuerySingleValue(sql));
+		//bOperations 
+		DbOp = new DbOperations(dataBaseName);
+		DbOp.setDb(dataBaseName);
+	}
+	
+	public String getWebPageFromDb(String Url) {
+		//DbOperations DbOpz = new DbOperations(dataBaseName);
+			 
+		int siteId = DbOp.getSiteId(Url);
+		if (siteId < 0) {
+			return "getWebPageFromDb error - site Id not found!";
+		}
+		else {
+			return getScript(siteId);	
+		}
+	}
+	
+	public String scrapeWebPage(String Url){
+		return doScrapeWebPage(Url);		
+	}
+	
+	public List<String> getScrapedUrls(){
+		
+		return DbOp.doGetScrapedUrls(dataBaseName); 
+	}
+	private static String doScrapeWebPage(String url) {
+		String message = "OK";
+		
+		siteId = DbOp.getSiteId(url);
+		
+		if (siteId < 0) {
+			System.out.println("doScrapeWebPage : no such url scraped, create new entry.");
+			siteId = DbOp.appendSiteToDB(url);
+		}
 		
 		System.out.println("scrapeWebPage : siteId = " + siteId);
 		try {
@@ -66,8 +103,7 @@ public class WebScraper {
 			}
 		catch (MalformedURLException e1)
 		{
-			message = "Malformed URL Exception : " + e1.toString();
-			
+			message = "Malformed URL Exception : " + e1.toString();			
 		} catch (IOException e2) {
 			message = e2.toString();
 		}
@@ -85,20 +121,14 @@ public class WebScraper {
 			System.out.println("Feil! : " + e.getMessage());
 			return false;
 		}
-		
 		return true;
 	}
-	
-	public static String getScript(){
-		
-		String script = DbOp.getScriptFromDB(dataBaseName, siteId);
-		return script;
-		
+
+	private static String getScript(int siteId){
+		return DbOp.getScriptFromDB(dataBaseName, siteId);
 	}
 	
-	private static boolean readConfig() {
-		System.out.println("readConfig Start!");
-		
+	private boolean readConfig() {
 		Properties prop = new Properties();
 		InputStream input = null;
 		boolean success = false;
@@ -114,14 +144,8 @@ public class WebScraper {
 
 			prop.load(input);
 			
-			System.out.println("readConfig : initialize values...");
-			
 			dataBaseName = prop.getProperty("dataBaseName");
 			url = prop.getProperty("url");
-			
-			System.out.println("readConfig : dataBaseName = " + dataBaseName);
-			System.out.println("readConfig : url = " + url);
-
 			
 			// how many properties with tablenames? -> initialize tableArray
 			int j = 0;
@@ -140,7 +164,6 @@ public class WebScraper {
 			String propertyTable = "table" + i;
 			String configTableName = prop.getProperty(propertyTable);
 			
-			
 			do {
 				tableArray[i-1] = configTableName;
 				i++;
@@ -148,9 +171,6 @@ public class WebScraper {
 				configTableName = prop.getProperty(propertyTable);
 			}
 			while (configTableName != null);
-			
-
-		
 		} catch (IOException ex) {
 			ex.printStackTrace();
 			success = false;
@@ -201,3 +221,4 @@ public class WebScraper {
 		}
 	}
 }
+	

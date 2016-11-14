@@ -5,11 +5,28 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DbOperations {	
 	
 	private Connection conn;
 	
+	
+	DbOperations(String dataBaseName){
+		try {
+			// initialize connection
+			conn = DriverManager.getConnection("jdbc:mysql://localhost/sys?" +
+                    "user=scrape_user&password=scrape_pwd");
+			
+		} catch (SQLException ex) {
+		    // handle any errors
+			System.out.println("getConnection() Error");
+		    System.out.println("SQLException: " + ex.getMessage());
+		    System.out.println("SQLState: " + ex.getSQLState());
+		    System.out.println("VendorError: " + ex.getErrorCode());
+		}
+	}
 	
 	DbOperations (String dataBaseName, String[] tableArray) {
 		try {
@@ -31,6 +48,18 @@ public class DbOperations {
 	
 	public Connection getConnection() {
 		return conn;
+	}
+	
+	public void setDb(String dataBaseName){
+		System.out.println("setDb : dataBaseName : " + dataBaseName);
+		try {
+			Statement stmt = conn.createStatement();
+			stmt.executeQuery("USE " + dataBaseName);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 	
 	public boolean createDbIfNotExists(Connection conn, String dataBaseName) {
@@ -148,7 +177,7 @@ public class DbOperations {
 		return true;
 	}
 	
-	public static int appendSiteToDB(Connection conn, String url) {
+	public int appendSiteToDB(String url) {
 		System.out.println("appendSiteToDB : Start!" );
 		String sql = "SELECT IF (EXISTS (" +
 				"SELECT 1 FROM Sites " + 
@@ -164,7 +193,7 @@ public class DbOperations {
 			if (rs.next()) {
 				if (rs.getString(1).equals("0")) {	
 					//No Site registered, insert into DB
-					System.out.print("appendSiteToDB : No site found, insert!");
+					System.out.println("appendSiteToDB : No site found, insert!");
 					sql = "INSERT INTO Sites (url, https) " +
 					"VALUES ('" + url + "','1')";
 					
@@ -185,6 +214,7 @@ public class DbOperations {
 				pS = conn.prepareStatement("DELETE FROM " + dataBaseName + ".Lines WHERE siteId = " + siteId);
 				pS.executeQuery();
 				
+				rs.close();
 				pS.close();
 			}
 			
@@ -213,10 +243,43 @@ public class DbOperations {
 		}
 	}
 	
+	public int getSiteId(String url){
+		//Find id of added site
+		int siteId;
+		//Find databasename
+		PreparedStatement pS;
+		
+		try {
+			pS = conn.prepareStatement("use webscraper");
+			pS.executeQuery();
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+			pS = conn.prepareStatement("SELECT sites.id FROM sites WHERE sites.url LIKE ?");
+			pS.setString(1, "%" + url + "%");
+			ResultSet rs = pS.executeQuery();
+			if (rs.next()) {
+				siteId = rs.getInt(1);
+			}
+			else {
+				siteId = -1;
+			}
+			rs.close();
+			pS.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			siteId = -1;
+		}
+		
+		return siteId;
+	}
 	
 	public String getScriptFromDB(String dataBaseName, int siteId){
-		System.out.println("getScriptFromDB : Start!" );
-		
 		StringBuilder sb = new StringBuilder();
 		PreparedStatement pS;
 		String newLine = "\n";
@@ -239,7 +302,6 @@ public class DbOperations {
 				if (found && rs.getString(1).toLowerCase().contains("</script>")) found = false;
 
 			}
-			System.out.println("getScriptFromDB : Finished!" );
 			return sb.toString();
 			
 		} catch (SQLException e) {
@@ -253,7 +315,6 @@ public class DbOperations {
 	}
 	
 	public String runQuerySingleValue(String sql) {
-		//Find id of added site
 		Statement stmt;
 		ResultSet rs;
 		String result;
@@ -295,7 +356,32 @@ public class DbOperations {
 			e.printStackTrace();
 			return false;
 		}
+	}
+
+	public List<String> doGetScrapedUrls(String dataBaseName){
+		Statement stmt;
+		ResultSet rs;
+		List<String> urlList = new ArrayList<String>();
 		
+		//urlList.add("(No sites scraped");
 		
+		String sql = "SELECT sites.url FROM " + dataBaseName + ".sites ORDER BY sites.url";
+		
+		try {
+			stmt = conn.createStatement();
+			stmt.executeQuery(sql);
+			rs = stmt.getResultSet();
+			while (rs.next()) {
+				urlList.add(rs.getString(1));
+			}
+			stmt.close();
+			rs.close();
+			return urlList;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			urlList.add("(No sites scraped)");
+			return urlList;
+		}
 	}
 }
