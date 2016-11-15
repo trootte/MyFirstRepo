@@ -51,7 +51,7 @@ public class Main extends Application {
 			List<String> urlList = ws.getScrapedUrls();
 			ObservableList<String> options = FXCollections.observableArrayList(urlList);
 			final ComboBox<String> comboBoxUrl = new ComboBox<String>(options);
-			
+			comboBoxUrl.getSelectionModel().select(0);
 			TextField textFieldUrl = new TextField();
 			textFieldUrl.setPromptText("Enter URL here");
 			textFieldUrl.setText("http://vg.no");
@@ -65,19 +65,29 @@ public class Main extends Application {
 			Label label3 = new Label("Scraped sites : ");
 			
 			Button btn = new Button();
-			btn.setText("GoTime!");
+			btn.setText("Gotime!");
 			btn.setAlignment(Pos.BOTTOM_CENTER);
+			//btn.getStyleClass().add("btn");
+			btn.setId("btn1");
 			btn.setOnAction(new EventHandler<ActionEvent>(){
 			
 	            @Override
 	            public void handle(ActionEvent event) {
 	            	String url = textFieldUrl.getText();
-	            	String scrapeResult = ws.scrapeWebPage(url);
-	            	System.out.println("scrapeResult : " + scrapeResult);
-	            	if (scrapeResult == "OK") {
-	            		textFieldScript.setText(ws.getWebPageFromDb(url));
+	            	
+	            	if (comboBoxUrl.getValue() == "(scrape new webpage)"){
+	            		System.out.println("Scrape new webpage!");
+	            		String scrapeResult = ws.scrapeWebPage(url);
+	            		System.out.println("scrapeResult : " + scrapeResult);
+	            		if (scrapeResult == "OK") {
+	            			textFieldScript.setText(ws.getWebPageFromDb(url));
+	            		}
+	            		else System.out.println("Scrape error : " + scrapeResult);
 	            	}
-	            	else System.out.print("Scrape error : " + scrapeResult);	            		
+	            	else {
+	            		System.out.println("Show existing webpage!");
+	            		textFieldScript.setText(ws.getWebPageFromDb(comboBoxUrl.getValue()));
+	            	}
 	            }
 	        });
 

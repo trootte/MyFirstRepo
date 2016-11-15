@@ -16,7 +16,7 @@ import java.util.Properties;
 public class WebScraper implements WebScraperInterface{
 
 	public static String dataBaseName; 
-	private static String url;
+	//private static String url;
 	private static String[] tableArray;
 	private static DbOperations DbOp;
 	//private static Connection conn;
@@ -92,6 +92,10 @@ public class WebScraper implements WebScraperInterface{
 			System.out.println("doScrapeWebPage : no such url scraped, create new entry.");
 			siteId = DbOp.appendSiteToDB(url);
 		}
+		else {
+			System.out.println("doScrapeWebPage : site exists, remove old lines...");
+			DbOp.removeLinesFromSite(dataBaseName, siteId);
+		}
 		
 		System.out.println("scrapeWebPage : siteId = " + siteId);
 		try {
@@ -131,21 +135,19 @@ public class WebScraper implements WebScraperInterface{
 	private boolean readConfig() {
 		Properties prop = new Properties();
 		InputStream input = null;
-		boolean success = false;
 		try {
 			try {
 				input = new FileInputStream("config.properties");
 			}
 			catch (Exception e) {
 				System.out.println("readConfig feil : " + e.getMessage());
-				success = false;
-				return success;
+				return false;
 			}
 
 			prop.load(input);
 			
 			dataBaseName = prop.getProperty("dataBaseName");
-			url = prop.getProperty("url");
+			//url = prop.getProperty("url");
 			
 			// how many properties with tablenames? -> initialize tableArray
 			int j = 0;
@@ -173,23 +175,19 @@ public class WebScraper implements WebScraperInterface{
 			while (configTableName != null);
 		} catch (IOException ex) {
 			ex.printStackTrace();
-			success = false;
-			return success;
+			return false;
 		} finally {
 			if (input != null) {
 				try {
 					input.close();
-					success = true;
-					return success;
+					return true;
 				} catch (IOException e) {
 					e.printStackTrace();
-					success = false;
-					return success;
+					return false;
 				}
 			}
 		}
-		success = true;
-		return success;
+		return true;
 	}
 	
 	private static void writeConfig() {

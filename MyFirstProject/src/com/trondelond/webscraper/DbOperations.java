@@ -19,8 +19,7 @@ public class DbOperations {
 			conn = DriverManager.getConnection("jdbc:mysql://localhost/sys?" +
                     "user=scrape_user&password=scrape_pwd");
 			
-		} catch (SQLException ex) {
-		    // handle any errors
+		} catch (SQLException ex) {		   
 			System.out.println("getConnection() Error");
 		    System.out.println("SQLException: " + ex.getMessage());
 		    System.out.println("SQLState: " + ex.getSQLState());
@@ -38,8 +37,7 @@ public class DbOperations {
 			createTablesIfNotExists(conn, tableArray);
 			
 		} catch (SQLException ex) {
-		    // handle any errors
-			System.out.println("getConnection() Error");
+		    System.out.println("getConnection() Error");
 		    System.out.println("SQLException: " + ex.getMessage());
 		    System.out.println("SQLState: " + ex.getSQLState());
 		    System.out.println("VendorError: " + ex.getErrorCode());
@@ -75,20 +73,19 @@ public class DbOperations {
 		    if (!rs.next()) {
 		    	//Create database
 		    	System.out.println("createDbIfNotExists : No database found!");
-		    	sql = "CREATE SCHEMA `" + dataBaseName + "` DEFAULT CHARACTER SET latin1 COLLATE latin1_danish_ci ;"; 
 		    	
+		    	sql = "CREATE SCHEMA `" + dataBaseName + "` DEFAULT CHARACTER SET latin1 COLLATE latin1_danish_ci ;"; 
 		    	stmt.execute(sql);
 		    	
 		    	System.out.println("createDbIfNotExists - Create database!");
 		    	
 		    	//Set schema
-		    	
 		    	sql = "USE " + dataBaseName;
-		    	
 		    	stmt.execute(sql);
 		    }
 		    else {
 		    	System.out.println("createDbIfNotExists - Database exists!");
+		    	
 		    	sql = "USE " + dataBaseName;
 				stmt = conn.createStatement();
 				stmt.execute(sql);
@@ -179,6 +176,7 @@ public class DbOperations {
 	
 	public int appendSiteToDB(String url) {
 		System.out.println("appendSiteToDB : Start!" );
+		
 		String sql = "SELECT IF (EXISTS (" +
 				"SELECT 1 FROM Sites " + 
 				"WHERE url = \"" + url + "\"),1 ,0)";
@@ -208,12 +206,12 @@ public class DbOperations {
 				rs = pS.executeQuery();
 				
 				if (rs != null) rs.next();
+				
 				String dataBaseName = rs.getString(1);
 				
 				//Site found, remove linked data
 				pS = conn.prepareStatement("DELETE FROM " + dataBaseName + ".Lines WHERE siteId = " + siteId);
 				pS.executeQuery();
-				
 				rs.close();
 				pS.close();
 			}
@@ -224,11 +222,10 @@ public class DbOperations {
 			"WHERE sites.url = '" + url + "'";
 			
 			stmt.executeQuery(sql);
-			
 			rs = stmt.getResultSet();
-			
 			if (rs.next()) siteId = rs.getInt(1);
-
+			rs.close();
+			
 			System.out.println("appendSiteToDB : Site id = " + siteId);
 			
 			return siteId;
@@ -302,6 +299,7 @@ public class DbOperations {
 				if (found && rs.getString(1).toLowerCase().contains("</script>")) found = false;
 
 			}
+			rs.close();
 			return sb.toString();
 			
 		} catch (SQLException e) {
@@ -338,11 +336,6 @@ public class DbOperations {
 	}
 	
 	public boolean appendLineToDB(String readerLine, int siteId) {
-		/*
-		String escapedHtml = readerLine.replace("\"", "x");
-		escapedHtml = escapedHtml.replace("<", "y");
-		escapedHtml = escapedHtml.replace(">", "z");
-		*/
 		if (readerLine == null) readerLine = "";
 		
 		try {
@@ -358,14 +351,28 @@ public class DbOperations {
 		}
 	}
 
+	public void removeLinesFromSite(String dataBaseName, int siteId){
+		Statement stmt;
+		String sql = "DELETE FROM " + dataBaseName + ".lines WHERE lines.siteId = " + siteId;
+		
+		try {
+			stmt = conn.createStatement();
+			stmt.execute(sql);
+			stmt.close();
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public List<String> doGetScrapedUrls(String dataBaseName){
 		Statement stmt;
 		ResultSet rs;
 		List<String> urlList = new ArrayList<String>();
 		
-		//urlList.add("(No sites scraped");
-		
 		String sql = "SELECT sites.url FROM " + dataBaseName + ".sites ORDER BY sites.url";
+		urlList.add("(scrape new webpage)");
 		
 		try {
 			stmt = conn.createStatement();

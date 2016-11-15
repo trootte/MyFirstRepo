@@ -1,1 +1,18 @@
 /* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+.btn{
+-fx-color:black;
+-fx-fill:blue;
+-fx-padding:4px;
+-fx-background-color:#2fc6b3;
+-fx-font-size: 30px;
+-fx-background-radius: 20px;
+ 
+}
+#btn1{
+-fx-color:black;
+-fx-fill:blue;
+-fx-padding:4px;
+-fx-background-color:#34c669;
+-fx-font-size: 30px;
+-fx-hgap:2px;
+} 
